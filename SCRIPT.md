@@ -5,7 +5,7 @@
 library(DEsingle)
 
 #get data from middle_result
-cell_num_group<-c(100,200,500,800,1000,2000)
+
 DEsingle.res<-read.csv("C:/Users/LHG/Desktop/middle_result.csv")
 
 DEsingle.res.DEg <- DEsingle.res[which(DEsingle.res$Type == "DEg"),]
