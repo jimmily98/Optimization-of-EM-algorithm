@@ -14,7 +14,7 @@ DEsingle.res.DEa <- DEsingle.res[which(DEsingle.res$Type == "DEa"),]
 
 DEsingle.res.DEs <- DEsingle.res[which(DEsingle.res$Type == "DEs"),]
 
-DEsingle.res.nDE <- DEsingle.res[which(is.na(DEsingle.res$Type)),]
+DEsingle.res.DEn <- DEsingle.res[which(is.na(DEsingle.res$Type)),]
 
 
 #generate the average of parametres_g
