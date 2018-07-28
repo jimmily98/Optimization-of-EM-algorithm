@@ -615,7 +615,7 @@ mu2<-(mu2_s+mu2_a+mu2_g)/3
 size1<-(size1_s+size1_g+size1_a)/3
 size2<-(size2_s+size2_g+size2_a)/3
 prob1<-(prob1_s+prob1_a+prob1_g)/3
-prob2<-(prob12_s+prob2_a+prob2_g)/3
+prob2<-(prob2_s+prob2_a+prob2_g)/3
  #generate the average of parametres_n 
 theta1_n<-sum(DEsingle.res.DEn[,2])/length(DEsingle.res.DEn[,2])
 theta2_n<-sum(DEsingle.res.DEn[,3])/length(DEsingle.res.DEn[,3])
