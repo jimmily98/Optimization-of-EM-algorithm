@@ -1,0 +1,1503 @@
+#Generate zinb destribution
+
+rzinbinom <- function(n, theta, size, prob = NULL, mu = NULL) {
+
+    #n
+
+    if (length(n) != 1)
+
+        stop("n must be a single number.")
+
+    if (!is.numeric(n))
+
+        stop("Invalid class of n.")
+
+    if (n <= 0)
+
+        stop("The length must be above 0.")
+
+    #theta
+
+    if (length(theta) != 1)
+
+        stop("theta must be a single number.")
+
+    if (!is.numeric(theta))
+
+        stop("invalid class of theta.")
+
+    if (theta > 1.0 || theta < 0.0)
+
+        stop("theta is invalid.")
+
+    #size
+
+    if (length(size) != 1)
+
+        stop("size must be a single number.")
+
+    if (!is.numeric(size))
+
+        stop("Invalid class of size.")
+
+    if (size <= 0.0)
+
+        stop("size must be positive.")
+
+    #prob and mu
+
+    if (!(is.null(mu) || is.null(prob)))
+
+        stop("mu and prob cannot be set at the same time.")
+
+    if (is.null(mu) && is.null(prob))
+
+        stop("mu or prob must be set.")
+
+    if (length(mu) != 1 && length(prob) != 1)
+
+        stop("mu or prob must be a single number.")
+
+    if (!(is.numeric(prob) || is.numeric(mu)))
+
+        stop("Invalid class of prob or mu.")
+
+    #generate NB
+
+    res <- NA
+
+    if (is.null(mu))
+
+        res <- rnbinom(n = n, size = size, prob = prob)
+
+    if (is.null(prob))
+
+        res <- rnbinom(n = n, size = size, mu = mu)
+
+    if (any(is.na(res)))
+
+        stop("NA detected.")
+
+    #randomly set zeros
+
+    res[sample(1:n, ceiling(theta * n), replace = FALSE)] <- 0
+
+    return (res)
+
+    }
+
+
+#Generate genes with no different expression
+
+Generate_nDE <- function(Cell_in_group, geneNum = 5000) {
+
+    res <- NULL
+
+    record <- NULL
+
+        for (i in 1: geneNum) {
+
+            rand_theta <- runif(1)
+
+            rand_size <- runif(1, min = 1, max = 1E5)
+
+            rand_prob <- runif(1, min = 1E-4, max = 1)
+
+            res <-rbind(res,rzinbinom(Cell_in_group * 2, rand_theta, rand_size, prob = rand_prob))
+
+            record <-rbind(record,c(rand_theta, rand_theta, rand_size, rand_size, rand_prob, rand_prob, NA))
+
+        }
+
+    rownames(res) <- paste0("gene_nDE_", 1:geneNum)
+
+    rownames(record) <- paste0("gene_nDE_", 1:geneNum)
+
+    write.csv(record, file = paste0(Cell_in_group,"_nDE_temp.csv"))
+
+    return (res)
+
+}
+
+
+
+#Generate DEs genes
+
+Generate_DEs <- function(Cell_in_group, geneNum = 50) {  
+    res <- NULL
+
+    record <- NULL
+
+    delta <- 0.3
+
+        for (i in 1:geneNum) {
+
+            rand_theta_1 <- runif(1)
+
+            rand_theta_2 <- runif(1)
+
+            while (abs(rand_theta_1 - rand_theta_2) < delta) {
+
+                rand_theta_1 <- runif(1)
+
+                rand_theta_2 <- runif(1)
+
+       }
+            rand_size <- runif(1, min = 1, max = 1E5)
+
+            rand_prob <- runif(1, min = 1E-4, max = 1)
+
+            res <- rbind(res,c(rzinbinom(Cell_in_group, rand_theta_1, rand_size, prob = rand_prob), rzinbinom(Cell_in_group, rand_theta_2, rand_size, prob = rand_prob)))
+
+            record <- rbind(record,c(rand_theta_1, rand_theta_2, rand_size, rand_size, rand_prob, rand_prob, "DEs"))
+
+   }
+
+
+    rownames(res) <- paste0("gene_DEs_", 1:geneNum)
+
+    rownames(record) <- paste0("gene_DEs_", 1:geneNum)
+
+    write.csv(record, file = paste0(Cell_in_group,"_DEs_temp.csv"))
+
+    gc()
+
+    return(res)
+
+}
+
+
+
+#Generate DEg genes
+
+Generate_DEg <- function(Cell_in_group, geneNum = 50) {
+
+    res <- NULL
+
+    record <- NULL
+    delta <- 0.3
+
+    delta_size <- 1000
+        for (i in 1:geneNum) {
+
+            rand_theta_1 <- runif(1)
+
+            rand_theta_2 <- runif(1)
+
+            while (abs(rand_theta_1 - rand_theta_2) < delta) {
+
+                rand_theta_1 <- runif(1)
+
+                rand_theta_2 <- runif(1)
+
+            }
+
+            rand_size_1 <- runif(1, min = 1, max = 1E5)
+
+            rand_size_2 <- runif(1, min = 1, max = 1E5)
+
+            while (abs(rand_size_1 - rand_size_2) < delta_size) {
+
+                rand_size_1 <- runif(1, min = 1, max = 1E5)
+
+                rand_size_2 <- runif(1, min = 1, max = 1E5)
+
+            }
+
+            rand_prob_1 <- runif(1, min = 1E-4, max = 1)
+
+            rand_prob_2 <- runif(1, min = 1E-4, max = 1)
+
+            while (abs(rand_prob_1 - rand_prob_2) < delta) {
+
+                rand_prob_1 <- runif(1, min = 1E-4, max = 1)
+
+                rand_prob_2 <- runif(1, min = 1E-4, max = 1)
+
+            }
+
+            res <-  rbind(res,c(rzinbinom(Cell_in_group, rand_theta_1, rand_size_1, prob = rand_prob_1), rzinbinom(Cell_in_group, rand_theta_2, rand_size_2, prob = rand_prob_2)))
+
+            record <-  rbind(record,c(rand_theta_1, rand_theta_2, rand_size_1, rand_size_2, rand_prob_1, rand_prob_2, "DEg"))
+
+    }
+
+    
+
+    rownames(res) <- paste0("gene_DEg_", 1:geneNum)
+
+    rownames(record) <- paste0("gene_DEg_", 1:geneNum)
+
+    write.csv(record, file = paste0(Cell_in_group,"_DEg_temp.csv"))
+
+    gc()
+
+    return(res)
+
+}
+
+
+nDE_num<-5000
+DEg_num<-50
+DEs_num<-50
+gene_sum<-sum(nDE_num,DEg_num,DEs_num)
+total_cells<-1000
+    counts <- Generate_DEs(total_cells, DEs_num)
+    counts <- rbind(counts, Generate_DEg(total_cells, DEg_num))
+    counts <- rbind(counts, Generate_nDE(total_cells, nDE_num))
+
+colnames(counts) <- paste0("cell_", 1:(total_cells * 2))
+ record <- rbind(read.csv(paste0(total_cells,"_nDE_temp.csv")), read.csv(paste0(total_cells,"_DEs_temp.csv")), read.csv(paste0(total_cells,"./DEg_temp.csv")))
+ record <- cbind(record, rep(NA, gene_sum))
+colnames(record) <- c("gene_name", "theta_1", "theta_2", "size_1", "size_2", "prob_1", "prob_2", "Type", "DEsingle_Type")
+
+write.csv(record, file = paste0("Origin_data_all",  ".csv"))
+
+
+groups <- as.factor(c(rep(TRUE, total_cells), rep(FALSE, total_cells)))
+cell_num<-c(50,100,200,300)
+num<-1
+time_array<-c()
+for(i in cell_num){
+counts_n<-cbind(counts[,1:i],counts[,1001:(1001+i)])
+groups_n<-cbind(groups[,1:i],groups[,1001:(1001+i)])
+
+
+
+DEsingle <- function(counts, group, parallel = FALSE, BPPARAM = bpparam()){
+
+  # Handle SingleCellExperiment
+  if(class(counts)[1] == "SingleCellExperiment"){
+    require(SingleCellExperiment)
+    counts <- counts(counts)
+  }
+
+  # Invalid input control
+  if(!is.matrix(counts) & !is.data.frame(counts) & class(counts)[1] != "dgCMatrix")
+    stop("Wrong data type of 'counts'")
+  if(sum(is.na(counts)) > 0)
+    stop("NA detected in 'counts'")
+  if(sum(counts < 0) > 0)
+    stop("Negative value detected in 'counts'")
+  if(all(counts == 0))
+    stop("All elements of 'counts' are zero")
+  if(any(colSums(counts) == 0))
+    warning("Library size of zero detected in 'counts'")
+
+  if(!is.factor(group))
+    stop("Data type of 'group' is not factor")
+  if(length(levels(group)) != 2)
+    stop("Levels number of 'group' is not two")
+  if(table(group)[1] < 2 | table(group)[2] < 2)
+    stop("Too few samples (< 2) in a group")
+  if(ncol(counts) != length(group))
+    stop("Length of 'group' must equal to column number of 'counts'")
+
+  if(!is.logical(parallel))
+    stop("Data type of 'parallel' is not logical")
+  if(length(parallel) != 1)
+    stop("Length of 'parallel' is not one")
+
+  # Preprocessing
+  counts <- round(as.matrix(counts))
+  storage.mode(counts) <- "integer"
+  if(any(rowSums(counts) == 0))
+    message("Removing ", sum(rowSums(counts) == 0), " rows of genes with all zero counts")
+  counts <- counts[rowSums(counts) != 0,]
+  geneNum <- nrow(counts)
+  sampleNum <- ncol(counts)
+
+  # Normalization
+  normalization <- function(counts, geneNum, sampleNum){
+    GEOmean <- rep(NA,geneNum)
+    for (i in 1:geneNum)
+    {
+      gene_NZ <- counts[i,counts[i,] > 0]
+      GEOmean[i] <- exp(sum(log(gene_NZ), na.rm=TRUE) / length(gene_NZ))
+    }
+    S <- rep(NA, sampleNum)
+    counts_norm <- counts
+    for (j in 1:sampleNum)
+    {
+      sample_j <- counts[,j]/GEOmean
+      S[j] <- median(sample_j[which(sample_j != 0)])
+      counts_norm[,j] <- counts[,j]/S[j]
+    }
+    counts_norm <- ceiling(counts_norm)
+    return(counts_norm)
+  }
+  message("Normalizing the data")
+  counts_norm <- normalization(counts, geneNum, sampleNum)
+
+  # Cache totalMean and foldChange for each gene
+  totalMean_1 <- rowMeans(counts[row.names(counts_norm), group == levels(group)[1]])
+  totalMean_2 <- rowMeans(counts[row.names(counts_norm), group == levels(group)[2]])
+  foldChange <- totalMean_1/totalMean_2
+  All_Mean_FC <- cbind(totalMean_1, totalMean_2, foldChange)
+
+  # Memory management
+  remove(counts, totalMean_1, totalMean_2, foldChange)
+  counts_norm <- Matrix(counts_norm, sparse = TRUE)
+  gc()
+
+
+  # Function of testing homogeneity of two ZINB populations
+  CallDE <- function(i){
+
+    # Memory management
+    if(i %% 100 == 0)
+      gc()
+
+    # Function input and output
+    counts_1 <- counts_norm[i, group == levels(group)[1]]
+    counts_2 <- counts_norm[i, group == levels(group)[2]]
+    results_gene <- data.frame(row.names = row.names(counts_norm)[i], theta_1 = NA, theta_2 = NA, mu_1 = NA, mu_2 = NA, size_1 = NA, size_2 = NA, prob_1 = NA, prob_2 = NA, total_mean_1 = NA, total_mean_2 = NA, foldChange = NA, norm_total_mean_1 = NA, norm_total_mean_2 = NA, norm_foldChange = NA, chi2LR1 = NA, pvalue_LR2 = NA, pvalue_LR3 = NA, FDR_LR2 = NA, FDR_LR3 = NA, pvalue = NA, pvalue.adj.FDR = NA, Remark = NA)
+
+    # Log likelihood functions
+    logL <- function(counts_1, theta_1, size_1, prob_1, counts_2, theta_2, size_2, prob_2){
+      logL_1 <- sum(dzinegbin(counts_1, size = size_1, prob = prob_1, pstr0 = theta_1, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_2, prob = prob_2, pstr0 = theta_2, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL2 <- function(param){
+      theta_resL2 <- param[1]
+      size_1_resL2 <- param[2]
+      prob_1_resL2 <- param[3]
+      size_2_resL2 <- param[4]
+      prob_2_resL2 <- param[5]
+      logL_1 <- sum(dzinegbin(counts_1, size = size_1_resL2, prob = prob_1_resL2, pstr0 = theta_resL2, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_2_resL2, prob = prob_2_resL2, pstr0 = theta_resL2, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL2NZ <- function(param){
+      theta_resL2 <- 0
+      size_1_resL2 <- param[1]
+      prob_1_resL2 <- param[2]
+      size_2_resL2 <- param[3]
+      prob_2_resL2 <- param[4]
+      logL_1 <- sum(dzinegbin(counts_1, size = size_1_resL2, prob = prob_1_resL2, pstr0 = theta_resL2, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_2_resL2, prob = prob_2_resL2, pstr0 = theta_resL2, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3 <- function(param){
+      theta_1_resL3 <- param[1]
+      size_resL3 <- param[2]
+      prob_resL3 <- param[3]
+      theta_2_resL3 <- param[4]
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3NZ1 <- function(param){
+      theta_1_resL3 <- 0
+      size_resL3 <- param[1]
+      prob_resL3 <- param[2]
+      theta_2_resL3 <- param[3]
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3NZ2 <- function(param){
+      theta_1_resL3 <- param[1]
+      size_resL3 <- param[2]
+      prob_resL3 <- param[3]
+      theta_2_resL3 <- 0
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3AZ1 <- function(param){
+      theta_1_resL3 <- 1
+      size_resL3 <- param[1]
+      prob_resL3 <- param[2]
+      theta_2_resL3 <- param[3]
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3AZ2 <- function(param){
+      theta_1_resL3 <- param[1]
+      size_resL3 <- param[2]
+      prob_resL3 <- param[3]
+      theta_2_resL3 <- 1
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3NZ1AZ2 <- function(param){
+      theta_1_resL3 <- 0
+      size_resL3 <- param[1]
+      prob_resL3 <- param[2]
+      theta_2_resL3 <- 1
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3NZ2AZ1 <- function(param){
+      theta_1_resL3 <- 1
+      size_resL3 <- param[1]
+      prob_resL3 <- param[2]
+      theta_2_resL3 <- 0
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    judgeParam <- function(param){
+      if((param >= 0) & (param <= 1))
+        res <- TRUE
+      else
+        res <- FALSE
+      res
+    }
+
+    # MLE of parameters of ZINB counts_1
+    if(sum(counts_1 == 0) > 0){
+      if(sum(counts_1 == 0) == length(counts_1)){
+        theta_1 <- 1
+        mu_1 <- 0
+        size_1 <- 1
+        prob_1 <- size_1/(size_1 + mu_1)
+      }else{
+        options(show.error.messages = FALSE)
+        zinb_try <- try(gamlssML(counts_1, family="ZINBI"), silent=TRUE)
+        options(show.error.messages = TRUE)
+        if('try-error' %in% class(zinb_try)){
+          zinb_try_twice <- try(zeroinfl(formula = counts_1 ~ 1 | 1, dist = "negbin"), silent=TRUE)
+          if('try-error' %in% class(zinb_try_twice)){
+            print("MLE of ZINB failed!");
+            results_gene[1,"Remark"] <- "ZINB failed!"
+            return(results_gene)
+          }else{
+            zinb_1 <- zinb_try_twice
+            theta_1 <- plogis(zinb_1$coefficients$zero);names(theta_1) <- NULL
+            mu_1 <- exp(zinb_1$coefficients$count);names(mu_1) <- NULL
+            size_1 <- zinb_1$theta;names(size_1) <- NULL
+            prob_1 <- size_1/(size_1 + mu_1);names(prob_1) <- NULL
+          }
+        }else{
+          zinb_1 <- zinb_try
+          theta_1 <- zinb_1$nu;names(theta_1) <- NULL
+          mu_1 <- zinb_1$mu;names(mu_1) <- NULL
+          size_1 <- 1/zinb_1$sigma;names(size_1) <- NULL
+          prob_1 <- size_1/(size_1 + mu_1);names(prob_1) <- NULL
+        }
+      }
+    }else{
+      op <- options(warn=2)
+      nb_try <- try(glm.nb(formula = counts_1 ~ 1), silent=TRUE)
+      options(op)
+      if('try-error' %in% class(nb_try)){
+        nb_try_twice <- try(fitdistr(counts_1, "Negative Binomial"), silent=TRUE)
+        if('try-error' %in% class(nb_try_twice)){
+          nb_try_again <- try(mle2(counts_1~dnbinom(mu=exp(logmu),size=1/invk), data=data.frame(counts_1), start=list(logmu=0,invk=1), method="L-BFGS-B", lower=c(logmu=-Inf,invk=1e-8)), silent=TRUE)
+          if('try-error' %in% class(nb_try_again)){
+            nb_try_fourth <- try(glm.nb(formula = counts_1 ~ 1), silent=TRUE)
+            if('try-error' %in% class(nb_try_fourth)){
+              print("MLE of NB failed!");
+              results_gene[1,"Remark"] <- "NB failed!"
+              return(results_gene)
+            }else{
+              nb_1 <- nb_try_fourth
+              theta_1 <- 0
+              mu_1 <- exp(nb_1$coefficients);names(mu_1) <- NULL
+              size_1 <- nb_1$theta;names(size_1) <- NULL
+              prob_1 <- size_1/(size_1 + mu_1);names(prob_1) <- NULL
+            }
+          }else{
+            nb_1 <- nb_try_again
+            theta_1 <- 0
+            mu_1 <- exp(nb_1@coef["logmu"]);names(mu_1) <- NULL
+            size_1 <- 1/nb_1@coef["invk"];names(size_1) <- NULL
+            prob_1 <- size_1/(size_1 + mu_1);names(prob_1) <- NULL
+          }
+        }else{
+          nb_1 <- nb_try_twice
+          theta_1 <- 0
+          mu_1 <- nb_1$estimate["mu"];names(mu_1) <- NULL
+          size_1 <- nb_1$estimate["size"];names(size_1) <- NULL
+          prob_1 <- size_1/(size_1 + mu_1);names(prob_1) <- NULL
+        }
+      }else{
+        nb_1 <- nb_try
+        theta_1 <- 0
+        mu_1 <- exp(nb_1$coefficients);names(mu_1) <- NULL
+        size_1 <- nb_1$theta;names(size_1) <- NULL
+        prob_1 <- size_1/(size_1 + mu_1);names(prob_1) <- NULL
+      }
+    }
+
+    # MLE of parameters of ZINB counts_2
+    if(sum(counts_2 == 0) > 0){
+      if(sum(counts_2 == 0) == length(counts_2)){
+        theta_2 <- 1
+        mu_2 <- 0
+        size_2 <- 1
+        prob_2 <- size_2/(size_2 + mu_2)
+      }else{
+        options(show.error.messages = FALSE)
+        zinb_try <- try(gamlssML(counts_2, family="ZINBI"), silent=TRUE)
+        options(show.error.messages = TRUE)
+        if('try-error' %in% class(zinb_try)){
+          zinb_try_twice <- try(zeroinfl(formula = counts_2 ~ 1 | 1, dist = "negbin"), silent=TRUE)
+          if('try-error' %in% class(zinb_try_twice)){
+            print("MLE of ZINB failed!");
+            results_gene[1,"Remark"] <- "ZINB failed!"
+            return(results_gene)
+          }else{
+            zinb_2 <- zinb_try_twice
+            theta_2 <- plogis(zinb_2$coefficients$zero);names(theta_2) <- NULL
+            mu_2 <- exp(zinb_2$coefficients$count);names(mu_2) <- NULL
+            size_2 <- zinb_2$theta;names(size_2) <- NULL
+            prob_2 <- size_2/(size_2 + mu_2);names(prob_2) <- NULL
+          }
+        }else{
+          zinb_2 <- zinb_try
+          theta_2 <- zinb_2$nu;names(theta_2) <- NULL
+          mu_2 <- zinb_2$mu;names(mu_2) <- NULL
+          size_2 <- 1/zinb_2$sigma;names(size_2) <- NULL
+          prob_2 <- size_2/(size_2 + mu_2);names(prob_2) <- NULL
+        }
+      }
+    }else{
+      op <- options(warn=2)
+      nb_try <- try(glm.nb(formula = counts_2 ~ 1), silent=TRUE)
+      options(op)
+      if('try-error' %in% class(nb_try)){
+        nb_try_twice <- try(fitdistr(counts_2, "Negative Binomial"), silent=TRUE)
+        if('try-error' %in% class(nb_try_twice)){
+          nb_try_again <- try(mle2(counts_2~dnbinom(mu=exp(logmu),size=1/invk), data=data.frame(counts_2), start=list(logmu=0,invk=1), method="L-BFGS-B", lower=c(logmu=-Inf,invk=1e-8)), silent=TRUE)
+          if('try-error' %in% class(nb_try_again)){
+            nb_try_fourth <- try(glm.nb(formula = counts_2 ~ 1), silent=TRUE)
+            if('try-error' %in% class(nb_try_fourth)){
+              print("MLE of NB failed!");
+              results_gene[1,"Remark"] <- "NB failed!"
+              return(results_gene)
+            }else{
+              nb_2 <- nb_try_fourth
+              theta_2 <- 0
+              mu_2 <- exp(nb_2$coefficients);names(mu_2) <- NULL
+              size_2 <- nb_2$theta;names(size_2) <- NULL
+              prob_2 <- size_2/(size_2 + mu_2);names(prob_2) <- NULL
+            }
+          }else{
+            nb_2 <- nb_try_again
+            theta_2 <- 0
+            mu_2 <- exp(nb_2@coef["logmu"]);names(mu_2) <- NULL
+            size_2 <- 1/nb_2@coef["invk"];names(size_2) <- NULL
+            prob_2 <- size_2/(size_2 + mu_2);names(prob_2) <- NULL
+          }
+        }else{
+          nb_2 <- nb_try_twice
+          theta_2 <- 0
+          mu_2 <- nb_2$estimate["mu"];names(mu_2) <- NULL
+          size_2 <- nb_2$estimate["size"];names(size_2) <- NULL
+          prob_2 <- size_2/(size_2 + mu_2);names(prob_2) <- NULL
+        }
+      }else{
+        nb_2 <- nb_try
+        theta_2 <- 0
+        mu_2 <- exp(nb_2$coefficients);names(mu_2) <- NULL
+        size_2 <- nb_2$theta;names(size_2) <- NULL
+        prob_2 <- size_2/(size_2 + mu_2);names(prob_2) <- NULL
+      }
+    }
+
+    # Restricted MLE of parameters of ZINB
+    if(sum(c(counts_1, counts_2) == 0) > 0){
+      options(show.error.messages = FALSE)
+      zinb_try <- try(gamlssML(c(counts_1, counts_2), family="ZINBI"), silent=TRUE)
+      options(show.error.messages = TRUE)
+      if('try-error' %in% class(zinb_try)){
+        zinb_try_twice <- try(zeroinfl(formula = c(counts_1, counts_2) ~ 1 | 1, dist = "negbin"), silent=TRUE)
+        if('try-error' %in% class(zinb_try_twice)){
+          print("MLE of ZINB failed!");
+          results_gene[1,"Remark"] <- "ZINB failed!"
+          return(results_gene)
+        }else{
+          zinb_res <- zinb_try_twice
+          theta_res <- plogis(zinb_res$coefficients$zero);names(theta_res) <- NULL
+          mu_res <- exp(zinb_res$coefficients$count);names(mu_res) <- NULL
+          size_res <- zinb_res$theta;names(size_res) <- NULL
+          prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
+        }
+      }else{
+        zinb_res <- zinb_try
+        theta_res <- zinb_res$nu;names(theta_res) <- NULL
+        mu_res <- zinb_res$mu;names(mu_res) <- NULL
+        size_res <- 1/zinb_res$sigma;names(size_res) <- NULL
+        prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
+      }
+
+      options(warn=-1)
+      # Restricted MLE of logL2 and logL3
+      # logL2
+      A <- matrix(rbind(c(1, 0, 0, 0, 0), c(-1, 0, 0, 0, 0), c(0, 0, 1, 0 ,0), c(0, 0, -1, 0 ,0), c(0, 0, 0, 0 ,1), c(0, 0, 0, 0 ,-1)), 6, 5)
+      B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10, 1e-10, 1+1e-10)
+      mleL2 <- try(maxLik(logLik = logL2, start = c(theta_resL2 = 0.5, size_1_resL2 = 1, prob_1_resL2 = 0.5, size_2_resL2 = 1, prob_2_resL2 = 0.5), constraints=list(ineqA=A, ineqB=B)), silent=TRUE)
+      if('try-error' %in% class(mleL2)){
+        mleL2 <- try(maxLik(logLik = logL2, start = c(theta_resL2 = 0, size_1_resL2 = 1, prob_1_resL2 = 0.5, size_2_resL2 = 1, prob_2_resL2 = 0.5), constraints=list(ineqA=A, ineqB=B)), silent=TRUE)
+      }
+      if('try-error' %in% class(mleL2)){
+        mleL2 <- try(maxLik(logLik = logL2, start = c(theta_resL2 = 1, size_1_resL2 = 1, prob_1_resL2 = 0.5, size_2_resL2 = 1, prob_2_resL2 = 0.5), constraints=list(ineqA=A, ineqB=B)), silent=TRUE)
+      }
+      if('try-error' %in% class(mleL2)){
+        A <- matrix(rbind(c(0, 1, 0, 0), c(0, -1, 0, 0), c(0, 0, 0 ,1), c(0, 0, 0 ,-1)), 4, 4)
+        B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10)
+        mleL2 <- maxLik(logLik = logL2NZ, start = c(size_1_resL2 = 1, prob_1_resL2 = 0.5, size_2_resL2 = 1, prob_2_resL2 = 0.5), constraints=list(ineqA=A, ineqB=B))
+        theta_resL2 <- 0
+        size_1_resL2 <- mleL2$estimate["size_1_resL2"];names(size_1_resL2) <- NULL
+        prob_1_resL2 <- mleL2$estimate["prob_1_resL2"];names(prob_1_resL2) <- NULL
+        size_2_resL2 <- mleL2$estimate["size_2_resL2"];names(size_2_resL2) <- NULL
+        prob_2_resL2 <- mleL2$estimate["prob_2_resL2"];names(prob_2_resL2) <- NULL
+      }else{
+        theta_resL2 <- mleL2$estimate["theta_resL2"];names(theta_resL2) <- NULL
+        size_1_resL2 <- mleL2$estimate["size_1_resL2"];names(size_1_resL2) <- NULL
+        prob_1_resL2 <- mleL2$estimate["prob_1_resL2"];names(prob_1_resL2) <- NULL
+        size_2_resL2 <- mleL2$estimate["size_2_resL2"];names(size_2_resL2) <- NULL
+        prob_2_resL2 <- mleL2$estimate["prob_2_resL2"];names(prob_2_resL2) <- NULL
+      }
+
+      # logL3
+      if((sum(counts_1 == 0) > 0) & (sum(counts_2 == 0) > 0)){
+        # logL3
+        if(sum(counts_1 == 0) == length(counts_1)){
+          A <- matrix(rbind(c(0, 1, 0), c(0, -1, 0), c(0, 0 ,1), c(0, 0 ,-1)), 4, 3)
+          B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3AZ1, start = c(size_resL3 = 1, prob_resL3 = 0.5, theta_2_resL3 = 0.5), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- 1
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- mleL3$estimate["theta_2_resL3"];names(theta_2_resL3) <- NULL
+        }else if(sum(counts_2 == 0) == length(counts_2)){
+          A <- matrix(rbind(c(1, 0, 0), c(-1, 0, 0), c(0, 0 ,1), c(0, 0 ,-1)), 4, 3)
+          B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3AZ2, start = c(theta_1_resL3 = 0.5, size_resL3 = 1, prob_resL3 = 0.5), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- mleL3$estimate["theta_1_resL3"];names(theta_1_resL3) <- NULL
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- 1
+        }else{
+          A <- matrix(rbind(c(1, 0, 0, 0), c(-1, 0, 0, 0), c(0, 0, 1, 0), c(0, 0, -1, 0), c(0, 0, 0 ,1), c(0, 0, 0 ,-1)), 6, 4)
+          B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10, 1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3, start = c(theta_1_resL3 = 0.5, size_resL3 = 1, prob_resL3 = 0.5, theta_2_resL3 = 0.5), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- mleL3$estimate["theta_1_resL3"];names(theta_1_resL3) <- NULL
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- mleL3$estimate["theta_2_resL3"];names(theta_2_resL3) <- NULL
+        }
+      }else if(sum(counts_1 == 0) == 0){
+        # logL3
+        if(sum(counts_2 == 0) == length(counts_2)){
+          A <- matrix(rbind(c(0, 1), c(0, -1)), 2, 2)
+          B <- c(1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3NZ1AZ2, start = c(size_resL3 = 1, prob_resL3 = 0.5), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- 0
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- 1
+        }else{
+          A <- matrix(rbind(c(0, 1, 0), c(0, -1, 0), c(0, 0 ,1), c(0, 0 ,-1)), 4, 3)
+          B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3NZ1, start = c(size_resL3 = 1, prob_resL3 = 0.5, theta_2_resL3 = 0.5), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- 0
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- mleL3$estimate["theta_2_resL3"];names(theta_2_resL3) <- NULL
+        }
+      }else if(sum(counts_2 == 0) == 0){
+        # logL3
+        if(sum(counts_1 == 0) == length(counts_1)){
+          A <- matrix(rbind(c(0, 1), c(0, -1)), 2, 2)
+          B <- c(1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3NZ2AZ1, start = c(size_resL3 = 1, prob_resL3 = 0.5), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- 1
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- 0
+        }else{
+          A <- matrix(rbind(c(1, 0, 0), c(-1, 0, 0), c(0, 0 ,1), c(0, 0 ,-1)), 4, 3)
+          B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3NZ2, start = c(theta_1_resL3 = 0.5, size_resL3 = 1, prob_resL3 = 0.5), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- mleL3$estimate["theta_1_resL3"];names(theta_1_resL3) <- NULL
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- 0
+        }
+      }
+      options(warn=0)
+    }else{
+      op <- options(warn=2)
+      nb_try <- try(glm.nb(formula = c(counts_1, counts_2) ~ 1), silent=TRUE)
+      options(op)
+      if('try-error' %in% class(nb_try)){
+        nb_try_twice <- try(fitdistr(c(counts_1, counts_2), "Negative Binomial"), silent=TRUE)
+        if('try-error' %in% class(nb_try_twice)){
+          nb_try_again <- try(mle2(c(counts_1, counts_2)~dnbinom(mu=exp(logmu),size=1/invk), data=data.frame(c(counts_1, counts_2)), start=list(logmu=0,invk=1), method="L-BFGS-B", lower=c(logmu=-Inf,invk=1e-8)), silent=TRUE)
+          if('try-error' %in% class(nb_try_again)){
+            nb_try_fourth <- try(glm.nb(formula = c(counts_1, counts_2) ~ 1), silent=TRUE)
+            if('try-error' %in% class(nb_try_fourth)){
+              print("MLE of NB failed!");
+              results_gene[1,"Remark"] <- "NB failed!"
+              return(results_gene)
+            }else{
+              nb_res <- nb_try_fourth
+              theta_res <- 0
+              mu_res <- exp(nb_res$coefficients);names(mu_res) <- NULL
+              size_res <- nb_res$theta;names(size_res) <- NULL
+              prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
+            }
+          }else{
+            nb_res <- nb_try_again
+            theta_res <- 0
+            mu_res <- exp(nb_res@coef["logmu"]);names(mu_res) <- NULL
+            size_res <- 1/nb_res@coef["invk"];names(size_res) <- NULL
+            prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
+          }
+        }else{
+          nb_res <- nb_try_twice
+          theta_res <- 0
+          mu_res <- nb_res$estimate["mu"];names(mu_res) <- NULL
+          size_res <- nb_res$estimate["size"];names(size_res) <- NULL
+          prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
+        }
+      }else{
+        nb_res <- nb_try
+        theta_res <- 0
+        mu_res <- exp(nb_res$coefficients);names(mu_res) <- NULL
+        size_res <- nb_res$theta;names(size_res) <- NULL
+        prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
+      }
+
+      # Restricted MLE of logL2
+      theta_resL2 <- 0
+      size_1_resL2 <- size_1
+      prob_1_resL2 <- prob_1
+      size_2_resL2 <- size_2
+      prob_2_resL2 <- prob_2
+
+      # Restricted MLE of logL3
+      theta_1_resL3 <- 0
+      size_resL3 <- size_res
+      prob_resL3 <- prob_res
+      theta_2_resL3 <- 0
+    }
+
+    # Judge parameters
+    if(!(judgeParam(theta_resL2) & judgeParam(prob_1_resL2) & judgeParam(prob_2_resL2)))
+      results_gene[1,"Remark"] <- "logL2 failed!"
+    if(!(judgeParam(theta_1_resL3) & judgeParam(theta_2_resL3) & judgeParam(prob_resL3)))
+      results_gene[1,"Remark"] <- "logL3 failed!"
+
+    # LRT test, likelihood ratio test
+    chi2LR1 <- 2 *(logL(counts_1, theta_1, size_1, prob_1, counts_2, theta_2, size_2, prob_2) - logL(counts_1, theta_res, size_res, prob_res, counts_2, theta_res, size_res, prob_res))
+    pvalue <- 1 - pchisq(chi2LR1, df = 3)
+    chi2LR2 <- 2 *(logL(counts_1, theta_1, size_1, prob_1, counts_2, theta_2, size_2, prob_2) - logL(counts_1, theta_resL2, size_1_resL2, prob_1_resL2, counts_2, theta_resL2, size_2_resL2, prob_2_resL2))
+    pvalue_LR2 <- 1 - pchisq(chi2LR2, df = 1)
+    chi2LR3 <- 2 *(logL(counts_1, theta_1, size_1, prob_1, counts_2, theta_2, size_2, prob_2) - logL(counts_1, theta_1_resL3, size_resL3, prob_resL3, counts_2, theta_2_resL3, size_resL3, prob_resL3))
+    pvalue_LR3 <- 1 - pchisq(chi2LR3, df = 2)
+
+    # Format output
+    results_gene[1,"theta_1"] <- theta_1
+    results_gene[1,"theta_2"] <- theta_2
+    results_gene[1,"mu_1"] <- mu_1
+    results_gene[1,"mu_2"] <- mu_2
+    results_gene[1,"size_1"] <- size_1
+    results_gene[1,"size_2"] <- size_2
+    results_gene[1,"prob_1"] <- prob_1
+    results_gene[1,"prob_2"] <- prob_2
+    results_gene[1,"norm_total_mean_1"] <- mean(counts_1)
+    results_gene[1,"norm_total_mean_2"] <- mean(counts_2)
+    results_gene[1,"norm_foldChange"] <- results_gene[1,"norm_total_mean_1"] / results_gene[1,"norm_total_mean_2"]
+    results_gene[1,"chi2LR1"] <- chi2LR1
+    results_gene[1,"pvalue"] <- pvalue
+    results_gene[1,"pvalue_LR2"] <- pvalue_LR2
+    results_gene[1,"pvalue_LR3"] <- pvalue_LR3
+    return(results_gene)
+  }
+
+
+  # Call DEG gene by gene
+  if(!parallel){
+    results <- matrix(data=NA, nrow = geneNum, ncol = 22, dimnames = list(row.names(counts_norm), c("theta_1", "theta_2", "mu_1", "mu_2", "size_1", "size_2", "prob_1", "prob_2", "total_mean_1", "total_mean_2", "foldChange", "norm_total_mean_1", "norm_total_mean_2", "norm_foldChange", "chi2LR1", "pvalue_LR2", "pvalue_LR3", "FDR_LR2", "FDR_LR3", "pvalue", "pvalue.adj.FDR", "Remark")))
+    results <- as.data.frame(results)
+    for(i in 1:geneNum){
+      cat("\r",paste0("DEsingle is analyzing ", i," of ",geneNum," expressed genes"))
+      results[i,] <- CallDE(i)
+    }
+  }else{
+    message("DEsingle is analyzing ", geneNum, " expressed genes in parallel")
+    results <- do.call(rbind, bplapply(1:geneNum, CallDE, BPPARAM = BPPARAM))
+  }
+
+  # Format output results
+  results[, c("total_mean_1", "total_mean_2", "foldChange")] <- All_Mean_FC
+  results[,"FDR_LR2"] <- p.adjust(results[,"pvalue_LR2"], method="fdr")
+  results[,"FDR_LR3"] <- p.adjust(results[,"pvalue_LR3"], method="fdr")
+  results[,"pvalue.adj.FDR"] <- p.adjust(results[,"pvalue"], method="fdr")
+  results <- results[order(results[,"chi2LR1"], decreasing = TRUE),]
+
+  # Abnormity control
+  if(exists("lastFuncGrad") & exists("lastFuncParam"))
+    remove(lastFuncGrad, lastFuncParam, envir=.GlobalEnv)
+  if(sum(!is.na(results[,"Remark"])) != 0)
+    cat(paste0("\n\n ",sum(!is.na(results[,"Remark"])), " gene failed.\n\n"))
+
+  return(results)
+
+
+}
+
+
+
+
+
+
+
+res <- DEtype(DEsingle(counts_n, groups_n), 0.05)
+
+  DEsingle.res<-res
+DEsingle.res.DEg <- DEsingle.res[which(DEsingle.res$Type == "DEg"),]
+DEsingle.res.DEa <- DEsingle.res[which(DEsingle.res$Type == "DEa"),]
+DEsingle.res.DEs <- DEsingle.res[which(DEsingle.res$Type == "DEs"),]
+DEsingle.res.DEn <- DEsingle.res[which(is.na(DEsingle.res$Type)),]
+#generate the average of parametres_g 
+theta1_g<-sum(DEsingle.res.DEg[,2])/length(DEsingle.res.DEg[,2])
+theta2_g<-sum(DEsingle.res.DEg[,3])/length(DEsingle.res.DEg[,3])
+mu1_g<-sum(DEsingle.res.DEg[,4])/length(DEsingle.res.DEg[,4])
+mu2_g<-sum(DEsingle.res.DEg[,5])/length(DEsingle.res.DEg[,5])
+size1_g<-sum(DEsingle.res.DEg[,6])/length(DEsingle.res.DEg[,6])
+size2_g<-sum(DEsingle.res.DEg[,7])/length(DEsingle.res.DEg[,7])
+prob1_g<-sum(DEsingle.res.DEg[,8])/length(DEsingle.res.DEg[,8])
+prob2_g<-sum(DEsingle.res.DEg[,9])/length(DEsingle.res.DEg[,9])
+#generate the average of parametres_a 
+theta1_a<-sum(DEsingle.res.DEa[,2])/length(DEsingle.res.DEa[,2])
+theta2_a<-sum(DEsingle.res.DEa[,3])/length(DEsingle.res.DEa[,3])
+mu1_a<-sum(DEsingle.res.DEa[,4])/length(DEsingle.res.DEa[,4])
+mu2_a<-sum(DEsingle.res.DEa[,5])/length(DEsingle.res.DEa[,5])
+size1_a<-sum(DEsingle.res.DEa[,6])/length(DEsingle.res.DEa[,6])
+size2_a<-sum(DEsingle.res.DEa[,7])/length(DEsingle.res.DEa[,7])
+prob1_a<-sum(DEsingle.res.DEa[,8])/length(DEsingle.res.DEa[,8])
+prob2_a<-sum(DEsingle.res.DEa[,9])/length(DEsingle.res.DEa[,9])
+#generate the average of parametres_s 
+theta1_s<-sum(DEsingle.res.DEs[,2])/length(DEsingle.res.DEs[,2])
+theta2_s<-sum(DEsingle.res.DEs[,3])/length(DEsingle.res.DEs[,3])
+mu1_s<-sum(DEsingle.res.DEs[,4])/length(DEsingle.res.DEs[,4])
+mu2_s<-sum(DEsingle.res.DEs[,5])/length(DEsingle.res.DEs[,5])
+size1_s<-sum(DEsingle.res.DEs[,6])/length(DEsingle.res.DEs[,6])
+size2_s<-sum(DEsingle.res.DEs[,7])/length(DEsingle.res.DEs[,7])
+prob1_s<-sum(DEsingle.res.DEs[,8])/length(DEsingle.res.DEs[,8])
+prob2_s<-sum(DEsingle.res.DEs[,9])/length(DEsingle.res.DEs[,9])
+ #generate the average of DEparameters
+theta1<-(theta1_s+theta1_a+theta1_g)/3
+theta2<-(theta2_s+theta2_a+theta2_g)/3
+mu1<-(mu1_s+mu1_a+mu1_g)/3
+mu2<-(mu2_s+mu2_a+mu2_g)/3
+size1<-(size1_s+size1_g+size1_a)/3
+size2<-(size2_s+size2_g+size2_a)/3
+prob1<-(prob1_s+prob1_a+prob1_g)/3
+prob2<-(prob2_s+prob2_a+prob2_g)/3
+ #generate the average of parametres_n 
+theta1_n<-sum(DEsingle.res.DEn[,2])/length(DEsingle.res.DEn[,2])
+theta2_n<-sum(DEsingle.res.DEn[,3])/length(DEsingle.res.DEn[,3])
+mu1_n<-sum(DEsingle.res.DEn[,4])/length(DEsingle.res.DEn[,4])
+mu2_n<-sum(DEsingle.res.DEn[,5])/length(DEsingle.res.DEn[,5])
+size1_n<-sum(DEsingle.res.DEn[,6])/length(DEsingle.res.DEn[,6])
+size2_n<-sum(DEsingle.res.DEn[,7])/length(DEsingle.res.DEn[,7])
+prob1_n<-sum(DEsingle.res.DEn[,8])/length(DEsingle.res.DEn[,8])
+prob2_n<-sum(DEsingle.res.DEn[,9])/length(DEsingle.res.DEn[,9])
+t1<-Sys.time()
+
+ DEsingle <- function(counts, group, parallel = FALSE, BPPARAM = bpparam()){
+   # Handle SingleCellExperiment
+  if(class(counts)[1] == "SingleCellExperiment"){
+    require(SingleCellExperiment)
+    counts <- counts(counts)
+  }
+   # Invalid input control
+  if(!is.matrix(counts) & !is.data.frame(counts) & class(counts)[1] != "dgCMatrix")
+    stop("Wrong data type of 'counts'")
+  if(sum(is.na(counts)) > 0)
+    stop("NA detected in 'counts'")
+  if(sum(counts < 0) > 0)
+    stop("Negative value detected in 'counts'")
+  if(all(counts == 0))
+    stop("All elements of 'counts' are zero")
+  if(any(colSums(counts) == 0))
+    warning("Library size of zero detected in 'counts'")
+   if(!is.factor(group))
+    stop("Data type of 'group' is not factor")
+  if(length(levels(group)) != 2)
+    stop("Levels number of 'group' is not two")
+  if(table(group)[1] < 2 | table(group)[2] < 2)
+    stop("Too few samples (< 2) in a group")
+  if(ncol(counts) != length(group))
+    stop("Length of 'group' must equal to column number of 'counts'")
+   if(!is.logical(parallel))
+    stop("Data type of 'parallel' is not logical")
+  if(length(parallel) != 1)
+    stop("Length of 'parallel' is not one")
+   # Preprocessing
+  counts <- round(as.matrix(counts))
+  storage.mode(counts) <- "integer"
+  if(any(rowSums(counts) == 0))
+    message("Removing ", sum(rowSums(counts) == 0), " rows of genes with all zero counts")
+  counts <- counts[rowSums(counts) != 0,]
+  geneNum <- nrow(counts)
+  sampleNum <- ncol(counts)
+   # Normalization
+  normalization <- function(counts, geneNum, sampleNum){
+    GEOmean <- rep(NA,geneNum)
+    for (i in 1:geneNum)
+    {
+      gene_NZ <- counts[i,counts[i,] > 0]
+      GEOmean[i] <- exp(sum(log(gene_NZ), na.rm=TRUE) / length(gene_NZ))
+    }
+    S <- rep(NA, sampleNum)
+    counts_norm <- counts
+    for (j in 1:sampleNum)
+    {
+      sample_j <- counts[,j]/GEOmean
+      S[j] <- median(sample_j[which(sample_j != 0)])
+      counts_norm[,j] <- counts[,j]/S[j]
+    }
+    counts_norm <- ceiling(counts_norm)
+    return(counts_norm)
+  }
+  message("Normalizing the data")
+  counts_norm <- normalization(counts, geneNum, sampleNum)
+   # Cache totalMean and foldChange for each gene
+  totalMean_1 <- rowMeans(counts[row.names(counts_norm), group == levels(group)[1]])
+  totalMean_2 <- rowMeans(counts[row.names(counts_norm), group == levels(group)[2]])
+  foldChange <- totalMean_1/totalMean_2
+  All_Mean_FC <- cbind(totalMean_1, totalMean_2, foldChange)
+   # Memory management
+  remove(counts, totalMean_1, totalMean_2, foldChange)
+  counts_norm <- Matrix(counts_norm, sparse = TRUE)
+  gc()
+    # Function of testing homogeneity of two ZINB populations
+  CallDE <- function(i){
+     # Memory management
+    if(i %% 100 == 0)
+      gc()
+     # Function input and output
+    counts_1 <- counts_norm[i, group == levels(group)[1]]
+    counts_2 <- counts_norm[i, group == levels(group)[2]]
+    results_gene <- data.frame(row.names = row.names(counts_norm)[i], theta_1 = NA, theta_2 = NA, mu_1 = NA, mu_2 = NA, size_1 = NA, size_2 = NA, prob_1 = NA, prob_2 = NA, total_mean_1 = NA, total_mean_2 = NA, foldChange = NA, norm_total_mean_1 = NA, norm_total_mean_2 = NA, norm_foldChange = NA, chi2LR1 = NA, pvalue_LR2 = NA, pvalue_LR3 = NA, FDR_LR2 = NA, FDR_LR3 = NA, pvalue = NA, pvalue.adj.FDR = NA, Remark = NA)
+     # Log likelihood functions
+    logL <- function(counts_1, theta_1, size_1, prob_1, counts_2, theta_2, size_2, prob_2){
+      logL_1 <- sum(dzinegbin(counts_1, size = size_1, prob = prob_1, pstr0 = theta_1, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_2, prob = prob_2, pstr0 = theta_2, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL2 <- function(param){
+      theta_resL2 <- param[1]
+      size_1_resL2 <- param[2]
+      prob_1_resL2 <- param[3]
+      size_2_resL2 <- param[4]
+      prob_2_resL2 <- param[5]
+      logL_1 <- sum(dzinegbin(counts_1, size = size_1_resL2, prob = prob_1_resL2, pstr0 = theta_resL2, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_2_resL2, prob = prob_2_resL2, pstr0 = theta_resL2, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL2NZ <- function(param){
+      theta_resL2 <- 0
+      size_1_resL2 <- param[1]
+      prob_1_resL2 <- param[2]
+      size_2_resL2 <- param[3]
+      prob_2_resL2 <- param[4]
+      logL_1 <- sum(dzinegbin(counts_1, size = size_1_resL2, prob = prob_1_resL2, pstr0 = theta_resL2, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_2_resL2, prob = prob_2_resL2, pstr0 = theta_resL2, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3 <- function(param){
+      theta_1_resL3 <- param[1]
+      size_resL3 <- param[2]
+      prob_resL3 <- param[3]
+      theta_2_resL3 <- param[4]
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3NZ1 <- function(param){
+      theta_1_resL3 <- 0
+      size_resL3 <- param[1]
+      prob_resL3 <- param[2]
+      theta_2_resL3 <- param[3]
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3NZ2 <- function(param){
+      theta_1_resL3 <- param[1]
+      size_resL3 <- param[2]
+      prob_resL3 <- param[3]
+      theta_2_resL3 <- 0
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3AZ1 <- function(param){
+      theta_1_resL3 <- 1
+      size_resL3 <- param[1]
+      prob_resL3 <- param[2]
+      theta_2_resL3 <- param[3]
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3AZ2 <- function(param){
+      theta_1_resL3 <- param[1]
+      size_resL3 <- param[2]
+      prob_resL3 <- param[3]
+      theta_2_resL3 <- 1
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3NZ1AZ2 <- function(param){
+      theta_1_resL3 <- 0
+      size_resL3 <- param[1]
+      prob_resL3 <- param[2]
+      theta_2_resL3 <- 1
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    logL3NZ2AZ1 <- function(param){
+      theta_1_resL3 <- 1
+      size_resL3 <- param[1]
+      prob_resL3 <- param[2]
+      theta_2_resL3 <- 0
+      logL_1 <- sum(dzinegbin(counts_1, size = size_resL3, prob = prob_resL3, pstr0 = theta_1_resL3, log = TRUE))
+      logL_2 <- sum(dzinegbin(counts_2, size = size_resL3, prob = prob_resL3, pstr0 = theta_2_resL3, log = TRUE))
+      logL <- logL_1 + logL_2
+      logL
+    }
+    judgeParam <- function(param){
+      if((param >= 0) & (param <= 1))
+        res <- TRUE
+      else
+        res <- FALSE
+      res
+    }
+     # MLE of parameters of ZINB counts_1
+    if(sum(counts_1 == 0) > 0){
+      if(sum(counts_1 == 0) == length(counts_1)){
+        theta_1 <- 1
+        mu_1 <- 0
+        size_1 <- 1
+        prob_1 <- size_1/(size_1 + mu_1)
+      }else{
+        options(show.error.messages = FALSE)
+        zinb_try <- try(gamlssML(counts_1, family="ZINBI",mu.start=mu1,sigma.start=size1,nu.start=theta1), silent=TRUE)
+        options(show.error.messages = TRUE)
+        if('try-error' %in% class(zinb_try)){
+          zinb_try_twice <- try(zeroinfl(formula = counts_1 ~ 1 | 1, dist = "negbin"), silent=TRUE)
+          if('try-error' %in% class(zinb_try_twice)){
+            print("MLE of ZINB failed!")
+			message("counts_1 failed")
+            results_gene[1,"Remark"] <- "ZINB failed!"
+            return(results_gene)
+          }else{
+            zinb_1 <- zinb_try_twice
+            theta_1 <- plogis(zinb_1$coefficients$zero);names(theta_1) <- NULL
+            mu_1 <- exp(zinb_1$coefficients$count);names(mu_1) <- NULL
+            size_1 <- zinb_1$theta;names(size_1) <- NULL
+            prob_1 <- size_1/(size_1 + mu_1);names(prob_1) <- NULL
+          }
+        }else{
+          zinb_1 <- zinb_try
+          theta_1 <- zinb_1$nu;names(theta_1) <- NULL
+          mu_1 <- zinb_1$mu;names(mu_1) <- NULL
+          size_1 <- 1/zinb_1$sigma;names(size_1) <- NULL
+          prob_1 <- size_1/(size_1 + mu_1);names(prob_1) <- NULL
+        }
+      }
+    }else{
+      op <- options(warn=2)
+      nb_try <- try(glm.nb(formula = counts_1 ~ 1), silent=TRUE)
+      options(op)
+      if('try-error' %in% class(nb_try)){
+        nb_try_twice <- try(fitdistr(counts_1, "Negative Binomial"), silent=TRUE)
+        if('try-error' %in% class(nb_try_twice)){
+          nb_try_again <- try(mle2(counts_1~dnbinom(mu=exp(logmu),size=1/invk), data=data.frame(counts_1), start=list(logmu=0,invk=1), method="L-BFGS-B", lower=c(logmu=-Inf,invk=1e-8)), silent=TRUE)
+          if('try-error' %in% class(nb_try_again)){
+            nb_try_fourth <- try(glm.nb(formula = counts_1 ~ 1), silent=TRUE)
+            if('try-error' %in% class(nb_try_fourth)){
+              print("MLE of NB failed!")
+              results_gene[1,"Remark"] <- "NB failed!"
+              return(results_gene)
+            }else{
+              nb_1 <- nb_try_fourth
+              theta_1 <- 0
+              mu_1 <- exp(nb_1$coefficients);names(mu_1) <- NULL
+              size_1 <- nb_1$theta;names(size_1) <- NULL
+              prob_1 <- size_1/(size_1 + mu_1);names(prob_1) <- NULL
+            }
+          }else{
+            nb_1 <- nb_try_again
+            theta_1 <- 0
+            mu_1 <- exp(nb_1@coef["logmu"]);names(mu_1) <- NULL
+            size_1 <- 1/nb_1@coef["invk"];names(size_1) <- NULL
+            prob_1 <- size_1/(size_1 + mu_1);names(prob_1) <- NULL
+          }
+        }else{
+          nb_1 <- nb_try_twice
+          theta_1 <- 0
+          mu_1 <- nb_1$estimate["mu"];names(mu_1) <- NULL
+          size_1 <- nb_1$estimate["size"];names(size_1) <- NULL
+          prob_1 <- size_1/(size_1 + mu_1);names(prob_1) <- NULL
+        }
+      }else{
+        nb_1 <- nb_try
+        theta_1 <- 0
+        mu_1 <- exp(nb_1$coefficients);names(mu_1) <- NULL
+        size_1 <- nb_1$theta;names(size_1) <- NULL
+        prob_1 <- size_1/(size_1 + mu_1);names(prob_1) <- NULL
+      }
+    }
+     # MLE of parameters of ZINB counts_2
+    if(sum(counts_2 == 0) > 0){
+      if(sum(counts_2 == 0) == length(counts_2)){
+        theta_2 <- 1
+        mu_2 <- 0
+        size_2 <- 1
+        prob_2 <- size_2/(size_2 + mu_2)
+      }else{
+        options(show.error.messages = FALSE)
+        zinb_try <- try(gamlssML(counts_2, family="ZINBI",mu.start=mu2,sigma.start=size2,nu.start=theta2), silent=TRUE)
+        options(show.error.messages = TRUE)
+        if('try-error' %in% class(zinb_try)){
+          zinb_try_twice <- try(zeroinfl(formula = counts_2 ~ 1 | 1, dist = "negbin"), silent=TRUE)
+          if('try-error' %in% class(zinb_try_twice)){
+            print("MLE of ZINB failed!")
+			message("counts_2 failed")
+            results_gene[1,"Remark"] <- "ZINB failed!"
+            return(results_gene)
+          }else{
+            zinb_2 <- zinb_try_twice
+            theta_2 <- plogis(zinb_2$coefficients$zero);names(theta_2) <- NULL
+            mu_2 <- exp(zinb_2$coefficients$count);names(mu_2) <- NULL
+            size_2 <- zinb_2$theta;names(size_2) <- NULL
+            prob_2 <- size_2/(size_2 + mu_2);names(prob_2) <- NULL
+          }
+        }else{
+          zinb_2 <- zinb_try
+          theta_2 <- zinb_2$nu;names(theta_2) <- NULL
+          mu_2 <- zinb_2$mu;names(mu_2) <- NULL
+          size_2 <- 1/zinb_2$sigma;names(size_2) <- NULL
+          prob_2 <- size_2/(size_2 + mu_2);names(prob_2) <- NULL
+        }
+      }
+    }else{
+      op <- options(warn=2)
+      nb_try <- try(glm.nb(formula = counts_2 ~ 1), silent=TRUE)
+      options(op)
+      if('try-error' %in% class(nb_try)){
+        nb_try_twice <- try(fitdistr(counts_2, "Negative Binomial"), silent=TRUE)
+        if('try-error' %in% class(nb_try_twice)){
+          nb_try_again <- try(mle2(counts_2~dnbinom(mu=exp(logmu),size=1/invk), data=data.frame(counts_2), start=list(logmu=0,invk=1), method="L-BFGS-B", lower=c(logmu=-Inf,invk=1e-8)), silent=TRUE)
+          if('try-error' %in% class(nb_try_again)){
+            nb_try_fourth <- try(glm.nb(formula = counts_2 ~ 1), silent=TRUE)
+            if('try-error' %in% class(nb_try_fourth)){
+              print("MLE of NB failed!");
+              results_gene[1,"Remark"] <- "NB failed!"
+              return(results_gene)
+            }else{
+              nb_2 <- nb_try_fourth
+              theta_2 <- 0
+              mu_2 <- exp(nb_2$coefficients);names(mu_2) <- NULL
+              size_2 <- nb_2$theta;names(size_2) <- NULL
+              prob_2 <- size_2/(size_2 + mu_2);names(prob_2) <- NULL
+            }
+          }else{
+            nb_2 <- nb_try_again
+            theta_2 <- 0
+            mu_2 <- exp(nb_2@coef["logmu"]);names(mu_2) <- NULL
+            size_2 <- 1/nb_2@coef["invk"];names(size_2) <- NULL
+            prob_2 <- size_2/(size_2 + mu_2);names(prob_2) <- NULL
+          }
+        }else{
+          nb_2 <- nb_try_twice
+          theta_2 <- 0
+          mu_2 <- nb_2$estimate["mu"];names(mu_2) <- NULL
+          size_2 <- nb_2$estimate["size"];names(size_2) <- NULL
+          prob_2 <- size_2/(size_2 + mu_2);names(prob_2) <- NULL
+        }
+      }else{
+        nb_2 <- nb_try
+        theta_2 <- 0
+        mu_2 <- exp(nb_2$coefficients);names(mu_2) <- NULL
+        size_2 <- nb_2$theta;names(size_2) <- NULL
+        prob_2 <- size_2/(size_2 + mu_2);names(prob_2) <- NULL
+      }
+    }
+     # Restricted MLE of parameters of ZINB
+    if(sum(c(counts_1, counts_2) == 0) > 0){
+      options(show.error.messages = FALSE)
+      zinb_try <- try(gamlssML(c(counts_1, counts_2), family="ZINBI",mu.start=(mu1+mu2)/2,sigma.start=(size1+size2)/2,nu.start=(theta1+theta2)/2), silent=TRUE)
+      options(show.error.messages = TRUE)
+      if('try-error' %in% class(zinb_try)){
+        zinb_try_twice <- try(zeroinfl(formula = c(counts_1, counts_2) ~ 1 | 1, dist = "negbin"), silent=TRUE)
+        if('try-error' %in% class(zinb_try_twice)){
+          print("MLE of ZINB failed!")
+		  message("Restricted failed")
+          results_gene[1,"Remark"] <- "ZINB failed!"
+          return(results_gene)
+        }else{
+          zinb_res <- zinb_try_twice
+          theta_res <- plogis(zinb_res$coefficients$zero);names(theta_res) <- NULL
+          mu_res <- exp(zinb_res$coefficients$count);names(mu_res) <- NULL
+          size_res <- zinb_res$theta;names(size_res) <- NULL
+          prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
+        }
+      }else{
+        zinb_res <- zinb_try
+        theta_res <- zinb_res$nu;names(theta_res) <- NULL
+        mu_res <- zinb_res$mu;names(mu_res) <- NULL
+        size_res <- 1/zinb_res$sigma;names(size_res) <- NULL
+        prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
+      }
+       options(warn=-1)
+      # Restricted MLE of logL2 and logL3
+      # logL2
+      A <- matrix(rbind(c(1, 0, 0, 0, 0), c(-1, 0, 0, 0, 0), c(0, 0, 1, 0 ,0), c(0, 0, -1, 0 ,0), c(0, 0, 0, 0 ,1), c(0, 0, 0, 0 ,-1)), 6, 5)
+      B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10, 1e-10, 1+1e-10)
+      mleL2 <- try(maxLik(logLik = logL2, start = c(theta_resL2 = theta1_s, size_1_resL2 = size1_s, prob_1_resL2 = prob1_s, size_2_resL2 = size2_s, prob_2_resL2 = prob2_s), constraints=list(ineqA=A, ineqB=B)), silent=TRUE)
+      if('try-error' %in% class(mleL2)){
+        mleL2 <- try(maxLik(logLik = logL2, start = c(theta_resL2 = 0, size_1_resL2 = 1, prob_1_resL2 = 0.5, size_2_resL2 = 1, prob_2_resL2 = 0.5), constraints=list(ineqA=A, ineqB=B)), silent=TRUE)
+      }
+      if('try-error' %in% class(mleL2)){
+        mleL2 <- try(maxLik(logLik = logL2, start = c(theta_resL2 = 1, size_1_resL2 = 1, prob_1_resL2 = 0.5, size_2_resL2 = 1, prob_2_resL2 = 0.5), constraints=list(ineqA=A, ineqB=B)), silent=TRUE)
+      }
+      if('try-error' %in% class(mleL2)){
+        A <- matrix(rbind(c(0, 1, 0, 0), c(0, -1, 0, 0), c(0, 0, 0 ,1), c(0, 0, 0 ,-1)), 4, 4)
+        B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10)
+        mleL2 <- maxLik(logLik = logL2NZ, start = c(size_1_resL2 = 1, prob_1_resL2 = 0.5, size_2_resL2 = 1, prob_2_resL2 = 0.5), constraints=list(ineqA=A, ineqB=B))
+        theta_resL2 <- 0
+        size_1_resL2 <- mleL2$estimate["size_1_resL2"];names(size_1_resL2) <- NULL
+        prob_1_resL2 <- mleL2$estimate["prob_1_resL2"];names(prob_1_resL2) <- NULL
+        size_2_resL2 <- mleL2$estimate["size_2_resL2"];names(size_2_resL2) <- NULL
+        prob_2_resL2 <- mleL2$estimate["prob_2_resL2"];names(prob_2_resL2) <- NULL
+      }else{
+        theta_resL2 <- mleL2$estimate["theta_resL2"];names(theta_resL2) <- NULL
+        size_1_resL2 <- mleL2$estimate["size_1_resL2"];names(size_1_resL2) <- NULL
+        prob_1_resL2 <- mleL2$estimate["prob_1_resL2"];names(prob_1_resL2) <- NULL
+        size_2_resL2 <- mleL2$estimate["size_2_resL2"];names(size_2_resL2) <- NULL
+        prob_2_resL2 <- mleL2$estimate["prob_2_resL2"];names(prob_2_resL2) <- NULL
+      }
+       # logL3
+      if((sum(counts_1 == 0) > 0) & (sum(counts_2 == 0) > 0)){
+        # logL3
+        if(sum(counts_1 == 0) == length(counts_1)){
+          A <- matrix(rbind(c(0, 1, 0), c(0, -1, 0), c(0, 0 ,1), c(0, 0 ,-1)), 4, 3)
+          B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3AZ1, start = c(size_resL3 = size1_a, prob_resL3 = prob1_a, theta_2_resL3 = theta1_a), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- 1
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- mleL3$estimate["theta_2_resL3"];names(theta_2_resL3) <- NULL
+        }else if(sum(counts_2 == 0) == length(counts_2)){
+          A <- matrix(rbind(c(1, 0, 0), c(-1, 0, 0), c(0, 0 ,1), c(0, 0 ,-1)), 4, 3)
+          B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3AZ2, start = c(theta_1_resL3 = theta1_a, size_resL3 = size1_a, prob_resL3 =prob1_a), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- mleL3$estimate["theta_1_resL3"];names(theta_1_resL3) <- NULL
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- 1
+        }else{
+          A <- matrix(rbind(c(1, 0, 0, 0), c(-1, 0, 0, 0), c(0, 0, 1, 0), c(0, 0, -1, 0), c(0, 0, 0 ,1), c(0, 0, 0 ,-1)), 6, 4)
+          B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10, 1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3, start = c(theta_1_resL3 = theta1_a, size_resL3 = size1_a, prob_resL3 = prob1_a, theta_2_resL3 =theta2_a), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- mleL3$estimate["theta_1_resL3"];names(theta_1_resL3) <- NULL
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- mleL3$estimate["theta_2_resL3"];names(theta_2_resL3) <- NULL
+        }
+      }else if(sum(counts_1 == 0) == 0){
+        # logL3
+        if(sum(counts_2 == 0) == length(counts_2)){
+          A <- matrix(rbind(c(0, 1), c(0, -1)), 2, 2)
+          B <- c(1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3NZ1AZ2, start = c(size_resL3 = size1_a, prob_resL3 = prob1_a), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- 0
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- 1
+        }else{
+          A <- matrix(rbind(c(0, 1, 0), c(0, -1, 0), c(0, 0 ,1), c(0, 0 ,-1)), 4, 3)
+          B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3NZ1, start = c(size_resL3 = 1, prob_resL3 = 0.5, theta_2_resL3 = 0.5), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- 0
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- mleL3$estimate["theta_2_resL3"];names(theta_2_resL3) <- NULL
+        }
+      }else if(sum(counts_2 == 0) == 0){
+        # logL3
+        if(sum(counts_1 == 0) == length(counts_1)){
+          A <- matrix(rbind(c(0, 1), c(0, -1)), 2, 2)
+          B <- c(1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3NZ2AZ1, start = c(size_resL3 = size1_a, prob_resL3 = prob1_a), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- 1
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- 0
+        }else{
+          A <- matrix(rbind(c(1, 0, 0), c(-1, 0, 0), c(0, 0 ,1), c(0, 0 ,-1)), 4, 3)
+          B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10)
+          mleL3 <- maxLik(logLik = logL3NZ2, start = c(theta_1_resL3 = 0.5, size_resL3 = 1, prob_resL3 = 0.5), constraints=list(ineqA=A, ineqB=B))
+          theta_1_resL3 <- mleL3$estimate["theta_1_resL3"];names(theta_1_resL3) <- NULL
+          size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
+          prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
+          theta_2_resL3 <- 0
+        }
+      }
+      options(warn=0)
+    }else{
+      op <- options(warn=2)
+      nb_try <- try(glm.nb(formula = c(counts_1, counts_2) ~ 1), silent=TRUE)
+      options(op)
+      if('try-error' %in% class(nb_try)){
+        nb_try_twice <- try(fitdistr(c(counts_1, counts_2), "Negative Binomial"), silent=TRUE)
+        if('try-error' %in% class(nb_try_twice)){
+          nb_try_again <- try(mle2(c(counts_1, counts_2)~dnbinom(mu=exp(logmu),size=1/invk), data=data.frame(c(counts_1, counts_2)), start=list(logmu=0,invk=1), method="L-BFGS-B", lower=c(logmu=-Inf,invk=1e-8)), silent=TRUE)
+          if('try-error' %in% class(nb_try_again)){
+            nb_try_fourth <- try(glm.nb(formula = c(counts_1, counts_2) ~ 1), silent=TRUE)
+            if('try-error' %in% class(nb_try_fourth)){
+              print("MLE of NB failed!");
+              results_gene[1,"Remark"] <- "NB failed!"
+              return(results_gene)
+            }else{
+              nb_res <- nb_try_fourth
+              theta_res <- 0
+              mu_res <- exp(nb_res$coefficients);names(mu_res) <- NULL
+              size_res <- nb_res$theta;names(size_res) <- NULL
+              prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
+            }
+          }else{
+            nb_res <- nb_try_again
+            theta_res <- 0
+            mu_res <- exp(nb_res@coef["logmu"]);names(mu_res) <- NULL
+            size_res <- 1/nb_res@coef["invk"];names(size_res) <- NULL
+            prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
+          }
+        }else{
+          nb_res <- nb_try_twice
+          theta_res <- 0
+          mu_res <- nb_res$estimate["mu"];names(mu_res) <- NULL
+          size_res <- nb_res$estimate["size"];names(size_res) <- NULL
+          prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
+        }
+      }else{
+        nb_res <- nb_try
+        theta_res <- 0
+        mu_res <- exp(nb_res$coefficients);names(mu_res) <- NULL
+        size_res <- nb_res$theta;names(size_res) <- NULL
+        prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
+      }
+       # Restricted MLE of logL2
+      theta_resL2 <- 0
+      size_1_resL2 <- size_1
+      prob_1_resL2 <- prob_1
+      size_2_resL2 <- size_2
+      prob_2_resL2 <- prob_2
+       # Restricted MLE of logL3
+      theta_1_resL3 <- 0
+      size_resL3 <- size_res
+      prob_resL3 <- prob_res
+      theta_2_resL3 <- 0
+    }
+     # Judge parameters
+    if(!(judgeParam(theta_resL2) & judgeParam(prob_1_resL2) & judgeParam(prob_2_resL2)))
+      results_gene[1,"Remark"] <- "logL2 failed!"
+    if(!(judgeParam(theta_1_resL3) & judgeParam(theta_2_resL3) & judgeParam(prob_resL3)))
+      results_gene[1,"Remark"] <- "logL3 failed!"
+     # LRT test, likelihood ratio test
+    chi2LR1 <- 2 *(logL(counts_1, theta_1, size_1, prob_1, counts_2, theta_2, size_2, prob_2) - logL(counts_1, theta_res, size_res, prob_res, counts_2, theta_res, size_res, prob_res))
+    pvalue <- 1 - pchisq(chi2LR1, df = 3)
+    chi2LR2 <- 2 *(logL(counts_1, theta_1, size_1, prob_1, counts_2, theta_2, size_2, prob_2) - logL(counts_1, theta_resL2, size_1_resL2, prob_1_resL2, counts_2, theta_resL2, size_2_resL2, prob_2_resL2))
+    pvalue_LR2 <- 1 - pchisq(chi2LR2, df = 1)
+    chi2LR3 <- 2 *(logL(counts_1, theta_1, size_1, prob_1, counts_2, theta_2, size_2, prob_2) - logL(counts_1, theta_1_resL3, size_resL3, prob_resL3, counts_2, theta_2_resL3, size_resL3, prob_resL3))
+    pvalue_LR3 <- 1 - pchisq(chi2LR3, df = 2)
+     # Format output
+    results_gene[1,"theta_1"] <- theta_1
+    results_gene[1,"theta_2"] <- theta_2
+    results_gene[1,"mu_1"] <- mu_1
+    results_gene[1,"mu_2"] <- mu_2
+    results_gene[1,"size_1"] <- size_1
+    results_gene[1,"size_2"] <- size_2
+    results_gene[1,"prob_1"] <- prob_1
+    results_gene[1,"prob_2"] <- prob_2
+    results_gene[1,"norm_total_mean_1"] <- mean(counts_1)
+    results_gene[1,"norm_total_mean_2"] <- mean(counts_2)
+    results_gene[1,"norm_foldChange"] <- results_gene[1,"norm_total_mean_1"] / results_gene[1,"norm_total_mean_2"]
+    results_gene[1,"chi2LR1"] <- chi2LR1
+    results_gene[1,"pvalue"] <- pvalue
+    results_gene[1,"pvalue_LR2"] <- pvalue_LR2
+    results_gene[1,"pvalue_LR3"] <- pvalue_LR3
+    return(results_gene)
+  }
+    # Call DEG gene by gene
+  if(!parallel){
+    results <- matrix(data=NA, nrow = geneNum, ncol = 22, dimnames = list(row.names(counts_norm), c("theta_1", "theta_2", "mu_1", "mu_2", "size_1", "size_2", "prob_1", "prob_2", "total_mean_1", "total_mean_2", "foldChange", "norm_total_mean_1", "norm_total_mean_2", "norm_foldChange", "chi2LR1", "pvalue_LR2", "pvalue_LR3", "FDR_LR2", "FDR_LR3", "pvalue", "pvalue.adj.FDR", "Remark")))
+    results <- as.data.frame(results)
+    for(i in 1:geneNum){
+      cat("\r",paste0("DEsingle is analyzing ", i," of ",geneNum," expressed genes"))
+      results[i,] <- CallDE(i)
+    }
+  }else{
+    message("DEsingle is analyzing ", geneNum, " expressed genes in parallel")
+    results <- do.call(rbind, bplapply(1:geneNum, CallDE, BPPARAM = BPPARAM))
+  }
+   # Format output results
+  results[, c("total_mean_1", "total_mean_2", "foldChange")] <- All_Mean_FC
+  results[,"FDR_LR2"] <- p.adjust(results[,"pvalue_LR2"], method="fdr")
+  results[,"FDR_LR3"] <- p.adjust(results[,"pvalue_LR3"], method="fdr")
+  results[,"pvalue.adj.FDR"] <- p.adjust(results[,"pvalue"], method="fdr")
+  results <- results[order(results[,"chi2LR1"], decreasing = TRUE),]
+   # Abnormity control
+  if(exists("lastFuncGrad") & exists("lastFuncParam"))
+    remove(lastFuncGrad, lastFuncParam, envir=.GlobalEnv)
+  if(sum(!is.na(results[,"Remark"])) != 0)
+    cat(paste0("\n\n ",sum(!is.na(results[,"Remark"])), " gene failed.\n\n"))
+   return(results)
+  }
+  results <- DEsingle(counts = raw_counts,group = as.factor(groups==115),parallel = FALSE)
+
+
+  results.classified <- DEtype(results = results, threshold = 0.05)
+t2<-Sys.time()
+write.csv(results.classified,file=paste0("results_whole_generated",i,".csv"))
+ time_array[num]<-(t2-t1)
+ num<-num+1
+  }
+
+   
+
+
+
+
+
+
+
+
