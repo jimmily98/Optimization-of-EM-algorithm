@@ -106,7 +106,8 @@ Generate_nDE <- function(Cell_in_group, geneNum = 5000) {
             res <-rbind(res,rzinbinom(Cell_in_group * 2, rand_theta, rand_size, prob = rand_prob))
 
             record <-rbind(record,c(rand_theta, rand_theta, rand_size, rand_size, rand_prob, rand_prob, NA))
-
+	    
+	    message(paste0(i," of 5000 nDE genes generated"))
         }
 
     rownames(res) <- paste0("gene_nDE_", 1:geneNum)
@@ -114,7 +115,7 @@ Generate_nDE <- function(Cell_in_group, geneNum = 5000) {
     rownames(record) <- paste0("gene_nDE_", 1:geneNum)
 
     write.csv(record, file = paste0(Cell_in_group,"_nDE_temp.csv"))
-
+    
     return (res)
 
 }
@@ -242,28 +243,32 @@ DEg_num<-50
 DEs_num<-50
 gene_sum<-sum(nDE_num,DEg_num,DEs_num)
 total_cells<-1000
-    counts <- Generate_DEs(total_cells, DEs_num)
-    counts <- rbind(counts, Generate_DEg(total_cells, DEg_num))
-    counts <- rbind(counts, Generate_nDE(total_cells, nDE_num))
+counts <- Generate_DEs(total_cells, DEs_num)
+counts <- rbind(counts, Generate_DEg(total_cells, DEg_num))
+counts <- rbind(counts, Generate_nDE(total_cells, nDE_num))
 
 colnames(counts) <- paste0("cell_", 1:(total_cells * 2))
- record <- rbind(read.csv(paste0(total_cells,"_nDE_temp.csv")), read.csv(paste0(total_cells,"_DEs_temp.csv")), read.csv(paste0(total_cells,"./DEg_temp.csv")))
+ record <- rbind(read.csv(paste0(total_cells,"_nDE_temp.csv")), read.csv(paste0(total_cells,"_DEs_temp.csv")), read.csv(paste0(total_cells,"_DEg_temp.csv")))
  record <- cbind(record, rep(NA, gene_sum))
 colnames(record) <- c("gene_name", "theta_1", "theta_2", "size_1", "size_2", "prob_1", "prob_2", "Type", "DEsingle_Type")
 
 write.csv(record, file = paste0("Origin_data_all",  ".csv"))
 
-
 groups <- as.factor(c(rep(TRUE, total_cells), rep(FALSE, total_cells)))
 cell_num<-c(50,100,200,300)
 num<-1
 time_array<-c()
+
+
+
+#小样本分析
 for(i in cell_num){
-counts_n<-cbind(counts[,1:i],counts[,1001:(1001+i)])
-groups_n<-cbind(groups[,1:i],groups[,1001:(1001+i)])
+# 取其中的一部分细胞进行计算
+counts_n<-cbind(counts[,1:i],counts[,1001:(1000+i)])
+a<-c(groups[1:i],groups[1001:(1000+i)])
+groups_n<-as.factor(a==2)
 
-
-
+# DEsingle——Original Example to generate average parameters
 DEsingle <- function(counts, group, parallel = FALSE, BPPARAM = bpparam()){
 
   # Handle SingleCellExperiment
@@ -857,19 +862,15 @@ DEsingle <- function(counts, group, parallel = FALSE, BPPARAM = bpparam()){
 
 }
 
-
-
-
-
-
-
+#res 是小样本的结果
 res <- DEtype(DEsingle(counts_n, groups_n), 0.05)
-
-  DEsingle.res<-res
-DEsingle.res.DEg <- DEsingle.res[which(DEsingle.res$Type == "DEg"),]
-DEsingle.res.DEa <- DEsingle.res[which(DEsingle.res$Type == "DEa"),]
-DEsingle.res.DEs <- DEsingle.res[which(DEsingle.res$Type == "DEs"),]
-DEsingle.res.DEn <- DEsingle.res[which(is.na(DEsingle.res$Type)),]
+	write.csv(res,file=paste0("res_generated_",i,"_.csv"));
+	DEg<-grep("gene_DEg_",rownames(res))
+	DEs<-grep("gene_DEs_",rownames(res))
+	nDE<-grep("gene_nDE_",rownames(res))
+DEsingle.res.DEg <- res[DEg,]
+DEsingle.res.DEs <- res[DEs,]
+DEsingle.res.DEn <- res[nDE,]
 #generate the average of parametres_g 
 theta1_g<-sum(DEsingle.res.DEg[,2])/length(DEsingle.res.DEg[,2])
 theta2_g<-sum(DEsingle.res.DEg[,3])/length(DEsingle.res.DEg[,3])
@@ -879,15 +880,8 @@ size1_g<-sum(DEsingle.res.DEg[,6])/length(DEsingle.res.DEg[,6])
 size2_g<-sum(DEsingle.res.DEg[,7])/length(DEsingle.res.DEg[,7])
 prob1_g<-sum(DEsingle.res.DEg[,8])/length(DEsingle.res.DEg[,8])
 prob2_g<-sum(DEsingle.res.DEg[,9])/length(DEsingle.res.DEg[,9])
-#generate the average of parametres_a 
-theta1_a<-sum(DEsingle.res.DEa[,2])/length(DEsingle.res.DEa[,2])
-theta2_a<-sum(DEsingle.res.DEa[,3])/length(DEsingle.res.DEa[,3])
-mu1_a<-sum(DEsingle.res.DEa[,4])/length(DEsingle.res.DEa[,4])
-mu2_a<-sum(DEsingle.res.DEa[,5])/length(DEsingle.res.DEa[,5])
-size1_a<-sum(DEsingle.res.DEa[,6])/length(DEsingle.res.DEa[,6])
-size2_a<-sum(DEsingle.res.DEa[,7])/length(DEsingle.res.DEa[,7])
-prob1_a<-sum(DEsingle.res.DEa[,8])/length(DEsingle.res.DEa[,8])
-prob2_a<-sum(DEsingle.res.DEa[,9])/length(DEsingle.res.DEa[,9])
+
+
 #generate the average of parametres_s 
 theta1_s<-sum(DEsingle.res.DEs[,2])/length(DEsingle.res.DEs[,2])
 theta2_s<-sum(DEsingle.res.DEs[,3])/length(DEsingle.res.DEs[,3])
@@ -897,16 +891,18 @@ size1_s<-sum(DEsingle.res.DEs[,6])/length(DEsingle.res.DEs[,6])
 size2_s<-sum(DEsingle.res.DEs[,7])/length(DEsingle.res.DEs[,7])
 prob1_s<-sum(DEsingle.res.DEs[,8])/length(DEsingle.res.DEs[,8])
 prob2_s<-sum(DEsingle.res.DEs[,9])/length(DEsingle.res.DEs[,9])
+
  #generate the average of DEparameters
-theta1<-(theta1_s+theta1_a+theta1_g)/3
-theta2<-(theta2_s+theta2_a+theta2_g)/3
-mu1<-(mu1_s+mu1_a+mu1_g)/3
-mu2<-(mu2_s+mu2_a+mu2_g)/3
-size1<-(size1_s+size1_g+size1_a)/3
-size2<-(size2_s+size2_g+size2_a)/3
-prob1<-(prob1_s+prob1_a+prob1_g)/3
-prob2<-(prob2_s+prob2_a+prob2_g)/3
- #generate the average of parametres_n 
+theta1<-(theta1_s+theta1_g)/2
+theta2<-(theta2_s+theta2_g)/2
+mu1<-(mu1_s+mu1_g)/2
+mu2<-(mu2_s+mu2_g)/2
+size1<-(size1_s+size1_g)/2
+size2<-(size2_s+size2_g)/2
+prob1<-(prob1_s+prob1_g)/2
+prob2<-(prob2_s+prob2_g)/2
+
+ #generate the average of parameters_n 
 theta1_n<-sum(DEsingle.res.DEn[,2])/length(DEsingle.res.DEn[,2])
 theta2_n<-sum(DEsingle.res.DEn[,3])/length(DEsingle.res.DEn[,3])
 mu1_n<-sum(DEsingle.res.DEn[,4])/length(DEsingle.res.DEn[,4])
@@ -917,6 +913,7 @@ prob1_n<-sum(DEsingle.res.DEn[,8])/length(DEsingle.res.DEn[,8])
 prob2_n<-sum(DEsingle.res.DEn[,9])/length(DEsingle.res.DEn[,9])
 t1<-Sys.time()
 
+# using average parameters（再计算一遍）
  DEsingle <- function(counts, group, parallel = FALSE, BPPARAM = bpparam()){
    # Handle SingleCellExperiment
   if(class(counts)[1] == "SingleCellExperiment"){
@@ -1257,13 +1254,15 @@ t1<-Sys.time()
       zinb_try <- try(gamlssML(c(counts_1, counts_2), family="ZINBI",mu.start=(mu1+mu2)/2,sigma.start=(size1+size2)/2,nu.start=(theta1+theta2)/2), silent=TRUE)
       options(show.error.messages = TRUE)
       if('try-error' %in% class(zinb_try)){
+		  message("first try of ZINB failed")
         zinb_try_twice <- try(zeroinfl(formula = c(counts_1, counts_2) ~ 1 | 1, dist = "negbin"), silent=TRUE)
         if('try-error' %in% class(zinb_try_twice)){
-          print("MLE of ZINB failed!")
-		  message("Restricted failed")
+          
+		  message("second try of ZINB failed")
           results_gene[1,"Remark"] <- "ZINB failed!"
           return(results_gene)
         }else{
+			message("third try of ZINB failed")
           zinb_res <- zinb_try_twice
           theta_res <- plogis(zinb_res$coefficients$zero);names(theta_res) <- NULL
           mu_res <- exp(zinb_res$coefficients$count);names(mu_res) <- NULL
@@ -1271,6 +1270,7 @@ t1<-Sys.time()
           prob_res <- size_res/(size_res + mu_res);names(prob_res) <- NULL
         }
       }else{
+		  message("fourth try of ZINB failed")
         zinb_res <- zinb_try
         theta_res <- zinb_res$nu;names(theta_res) <- NULL
         mu_res <- zinb_res$mu;names(mu_res) <- NULL
@@ -1311,7 +1311,7 @@ t1<-Sys.time()
         if(sum(counts_1 == 0) == length(counts_1)){
           A <- matrix(rbind(c(0, 1, 0), c(0, -1, 0), c(0, 0 ,1), c(0, 0 ,-1)), 4, 3)
           B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10)
-          mleL3 <- maxLik(logLik = logL3AZ1, start = c(size_resL3 = size1_a, prob_resL3 = prob1_a, theta_2_resL3 = theta1_a), constraints=list(ineqA=A, ineqB=B))
+          mleL3 <- maxLik(logLik = logL3AZ1, start = c(size_resL3 = 1, prob_resL3 = 0.5, theta_2_resL3 = 0.5), constraints=list(ineqA=A, ineqB=B))
           theta_1_resL3 <- 1
           size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
           prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
@@ -1319,7 +1319,7 @@ t1<-Sys.time()
         }else if(sum(counts_2 == 0) == length(counts_2)){
           A <- matrix(rbind(c(1, 0, 0), c(-1, 0, 0), c(0, 0 ,1), c(0, 0 ,-1)), 4, 3)
           B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10)
-          mleL3 <- maxLik(logLik = logL3AZ2, start = c(theta_1_resL3 = theta1_a, size_resL3 = size1_a, prob_resL3 =prob1_a), constraints=list(ineqA=A, ineqB=B))
+          mleL3 <- maxLik(logLik = logL3AZ2, start = c(theta_1_resL3 = 0.5, size_resL3 = 1, prob_resL3 =0.5), constraints=list(ineqA=A, ineqB=B))
           theta_1_resL3 <- mleL3$estimate["theta_1_resL3"];names(theta_1_resL3) <- NULL
           size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
           prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
@@ -1327,7 +1327,7 @@ t1<-Sys.time()
         }else{
           A <- matrix(rbind(c(1, 0, 0, 0), c(-1, 0, 0, 0), c(0, 0, 1, 0), c(0, 0, -1, 0), c(0, 0, 0 ,1), c(0, 0, 0 ,-1)), 6, 4)
           B <- c(1e-10, 1+1e-10, 1e-10, 1+1e-10, 1e-10, 1+1e-10)
-          mleL3 <- maxLik(logLik = logL3, start = c(theta_1_resL3 = theta1_a, size_resL3 = size1_a, prob_resL3 = prob1_a, theta_2_resL3 =theta2_a), constraints=list(ineqA=A, ineqB=B))
+          mleL3 <- maxLik(logLik = logL3, start = c(theta_1_resL3 = 0.5, size_resL3 = 1, prob_resL3 = 0.5, theta_2_resL3 =0.5), constraints=list(ineqA=A, ineqB=B))
           theta_1_resL3 <- mleL3$estimate["theta_1_resL3"];names(theta_1_resL3) <- NULL
           size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
           prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
@@ -1338,7 +1338,7 @@ t1<-Sys.time()
         if(sum(counts_2 == 0) == length(counts_2)){
           A <- matrix(rbind(c(0, 1), c(0, -1)), 2, 2)
           B <- c(1e-10, 1+1e-10)
-          mleL3 <- maxLik(logLik = logL3NZ1AZ2, start = c(size_resL3 = size1_a, prob_resL3 = prob1_a), constraints=list(ineqA=A, ineqB=B))
+          mleL3 <- maxLik(logLik = logL3NZ1AZ2, start = c(size_resL3 = 1, prob_resL3 = 0.5), constraints=list(ineqA=A, ineqB=B))
           theta_1_resL3 <- 0
           size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
           prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
@@ -1357,7 +1357,7 @@ t1<-Sys.time()
         if(sum(counts_1 == 0) == length(counts_1)){
           A <- matrix(rbind(c(0, 1), c(0, -1)), 2, 2)
           B <- c(1e-10, 1+1e-10)
-          mleL3 <- maxLik(logLik = logL3NZ2AZ1, start = c(size_resL3 = size1_a, prob_resL3 = prob1_a), constraints=list(ineqA=A, ineqB=B))
+          mleL3 <- maxLik(logLik = logL3NZ2AZ1, start = c(size_resL3 = 1, prob_resL3 = 0.5), constraints=list(ineqA=A, ineqB=B))
           theta_1_resL3 <- 1
           size_resL3 <- mleL3$estimate["size_resL3"];names(size_resL3) <- NULL
           prob_resL3 <- mleL3$estimate["prob_resL3"];names(prob_resL3) <- NULL
@@ -1428,6 +1428,7 @@ t1<-Sys.time()
       theta_2_resL3 <- 0
     }
      # Judge parameters
+	print(theta_resL2)
     if(!(judgeParam(theta_resL2) & judgeParam(prob_1_resL2) & judgeParam(prob_2_resL2)))
       results_gene[1,"Remark"] <- "logL2 failed!"
     if(!(judgeParam(theta_1_resL3) & judgeParam(theta_2_resL3) & judgeParam(prob_resL3)))
@@ -1482,10 +1483,9 @@ t1<-Sys.time()
     cat(paste0("\n\n ",sum(!is.na(results[,"Remark"])), " gene failed.\n\n"))
    return(results)
   }
-  results <- DEsingle(counts = raw_counts,group = as.factor(groups==115),parallel = FALSE)
-
-
-  results.classified <- DEtype(results = results, threshold = 0.05)
+  
+results <- DEsingle(counts = counts,group =groups,parallel = FALSE)
+results.classified <- DEtype(results = results, threshold = 0.05)
 t2<-Sys.time()
 write.csv(results.classified,file=paste0("results_whole_generated",i,".csv"))
  time_array[num]<-(t2-t1)
@@ -1493,11 +1493,5 @@ write.csv(results.classified,file=paste0("results_whole_generated",i,".csv"))
   }
 
    
-
-
-
-
-
-
 
 
